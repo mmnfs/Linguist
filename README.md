@@ -4,14 +4,21 @@ This is an interactive English learning exercise where users can reconstruct jum
 
 ## Features
 
-- **Drag and Drop Interface:** Intuitive interface to drag words and place them in the correct order to form a meaningful sentence.
-- **Audio Playback:** Includes audio playback (Web Speech API / TTS) to hear the sentence spoken in high-quality English voices.
-- **Interactive Feedback:** Immediate visual feedback when interacting with the exercise.
+## Exercises
+
+1. **Jumbled Sentence Exercise** (`english_jumbled_sentence_exercise.html`)
+   - Interactive drag-and-drop to reconstruct a jumbled sentence.
+   - Includes audio playback (Web Speech API / TTS).
+
+2. **Reading Ordering Exercise** (`reading_ordering_exercise.html`)
+   - Read a short text ("A Busy Morning") and organize the events in chronological order.
+   - Interactive drag-and-drop list with visual feedback and confetti upon completion.
 
 ## Files
 
-- `english_jumbled_sentence_exercise.html`: The main web application containing the UI, styling, and logic.
-- `phrase.mp3` / `phrase.b64`: Audio assets for the exercise.
+- `reading_ordering_exercise.html`: The reading and ordering exercise.
+- `english_jumbled_sentence_exercise.html`: The jumbled sentence exercise.
+- `phrase.mp3` / `phrase.b64`: Audio assets.
 - `english_jumbled_sentence_exercise.png`: Screenshot or reference image.
 
 ## How to run

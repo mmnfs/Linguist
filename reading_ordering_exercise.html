@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reading Exercise: Order Events</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #4f46e5;
+        --primary-hover: #4338ca;
+        --bg-gradient-start: #f8fafc;
+        --bg-gradient-end: #e2e8f0;
+        --text-dark: #0f172a;
+        --text-muted: #475569;
+        --card-bg: rgba(255, 255, 255, 0.9);
+        --success: #10b981;
+        --error: #ef4444;
+        --border-light: #cbd5e1;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background: linear-gradient(
+          135deg,
+          var(--bg-gradient-start) 0%,
+          var(--bg-gradient-end) 100%
+        );
+        color: var(--text-dark);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 2rem;
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 800px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+
+      header {
+        text-align: center;
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        font-family: "Playfair Display", serif;
+        font-size: 2.5rem;
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+      }
+
+      p.subtitle {
+        color: var(--text-muted);
+        font-size: 1.1rem;
+      }
+
+      .reading-card {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 2rem;
+        box-shadow:
+          0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+      }
+
+      .reading-card h2 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+        color: var(--text-dark);
+        border-bottom: 2px solid var(--primary);
+        display: inline-block;
+        padding-bottom: 0.25rem;
+      }
+
+      .reading-content {
+        font-size: 1.2rem;
+        color: #1e293b;
+        letter-spacing: 0.01em;
+      }
+
+      .task-section {
+        background: var(--card-bg);
+        border-radius: 1rem;
+        padding: 2rem;
+        box-shadow:
+          0 10px 15px -3px rgba(0, 0, 0, 0.1),
+          0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+      }
+
+      .task-section h3 {
+        font-size: 1.25rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .task-instruction {
+        color: var(--text-muted);
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+      }
+
+      .sortable-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+      }
+
+      .draggable-item {
+        background: white;
+        border: 2px solid var(--border-light);
+        border-radius: 0.75rem;
+        padding: 1rem 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        cursor: grab;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        user-select: none;
+      }
+
+      .draggable-item:hover {
+        border-color: var(--primary);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        transform: translateY(-2px);
+      }
+
+      .draggable-item:active {
+        cursor: grabbing;
+      }
+
+      .draggable-item.dragging {
+        opacity: 0.5;
+        box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary);
+        transform: scale(1.02);
+        background: #f8fafc;
+      }
+
+      .drag-handle {
+        color: #94a3b8;
+        cursor: grab;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .drag-handle svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .item-text {
+        font-size: 1.1rem;
+        font-weight: 500;
+      }
+
+      .item-number {
+        background: #f1f5f9;
+        color: #475569;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        font-weight: 700;
+        margin-right: -0.5rem;
+      }
+
+      .controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .btn {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 0.875rem 2rem;
+        border-radius: 0.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition:
+          background 0.2s ease,
+          transform 0.1s ease;
+        box-shadow: 0 4px 6px rgba(79, 70, 229, 0.2);
+      }
+
+      .btn:hover {
+        background: var(--primary-hover);
+        transform: translateY(-1px);
+      }
+
+      .btn:active {
+        transform: translateY(1px);
+      }
+
+      .feedback {
+        font-size: 1.1rem;
+        font-weight: 600;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .feedback.show {
+        opacity: 1;
+      }
+
+      .feedback.success {
+        color: var(--success);
+      }
+
+      .feedback.error {
+        color: var(--error);
+      }
+
+      /* Success Animation Classes */
+      .item-correct {
+        border-color: var(--success);
+        background-color: #f0fdf4;
+      }
+
+      .item-incorrect {
+        border-color: var(--error);
+        background-color: #fef2f2;
+      }
+
+      .pulse {
+        animation: pulse 0.5s ease-in-out;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.02);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      @media (max-width: 640px) {
+        h1 {
+          font-size: 2rem;
+        }
+        .container {
+          padding: 1rem;
+        }
+        .item-text {
+          font-size: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Reading Comprehension</h1>
+        <p class="subtitle">Practice your reading and sequencing skills</p>
+      </header>
+
+      <section class="reading-card">
+        <h2>A Busy Morning</h2>
+        <div class="reading-content">
+          <p>
+            Maria woke up at 7:00. She brushed her teeth and got dressed. Then
+            she made coffee and ate breakfast. After that, she took the bus to
+            school. She arrived at 8:30 and met her friends.
+          </p>
+        </div>
+      </section>
+
+      <section class="task-section">
+        <h3>Put the events in the correct order</h3>
+        <p class="task-instruction">
+          Drag and drop the items below to match the chronological order from
+          the story (1 to 5).
+        </p>
+
+        <div class="sortable-list" id="sortable-list">
+          <!-- Items will be injected here by JS -->
+        </div>
+
+        <div class="controls">
+          <button class="btn" id="check-btn">Check Answer</button>
+          <div class="feedback" id="feedback-msg"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Canvas for Confetti -->
+    <canvas
+      id="confetti"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 100;
+      "
+    ></canvas>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+      const correctOrder = [
+        "Maria woke up.",
+        "Maria brushed her teeth and got dressed.",
+        "Maria made coffee and ate breakfast.",
+        "Maria took the bus to school.",
+        "Maria arrived at school.",
+      ];
+
+      const initialOrder = [
+        "Maria arrived at school.",
+        "Maria woke up.",
+        "Maria took the bus to school.",
+        "Maria made coffee and ate breakfast.",
+        "Maria brushed her teeth and got dressed.",
+      ];
+
+      const listContainer = document.getElementById("sortable-list");
+      const checkBtn = document.getElementById("check-btn");
+      const feedbackMsg = document.getElementById("feedback-msg");
+
+      // Initialize List
+      function renderItems() {
+        listContainer.innerHTML = "";
+        initialOrder.forEach((text, index) => {
+          const item = document.createElement("div");
+          item.classList.add("draggable-item");
+          item.setAttribute("draggable", "true");
+          item.dataset.text = text;
+
+          item.innerHTML = `
+                    <div class="drag-handle">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                    </div>
+                    <div class="item-number">${index + 1}</div>
+                    <div class="item-text">${text}</div>
+                `;
+
+          listContainer.appendChild(item);
+          addDragEvents(item);
+        });
+        updateNumbers();
+      }
+
+      // Drag and Drop Logic
+      let draggedItem = null;
+
+      function addDragEvents(item) {
+        item.addEventListener("dragstart", (e) => {
+          draggedItem = item;
+          setTimeout(() => item.classList.add("dragging"), 0);
+        });
+
+        item.addEventListener("dragend", () => {
+          draggedItem.classList.remove("dragging");
+          draggedItem = null;
+          updateNumbers();
+          removeHighlights();
+        });
+      }
+
+      listContainer.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(listContainer, e.clientY);
+        const draggable = document.querySelector(".dragging");
+        if (afterElement == null) {
+          listContainer.appendChild(draggable);
+        } else {
+          listContainer.insertBefore(draggable, afterElement);
+        }
+      });
+
+      function getDragAfterElement(container, y) {
+        const draggableElements = [
+          ...container.querySelectorAll(".draggable-item:not(.dragging)"),
+        ];
+
+        return draggableElements.reduce(
+          (closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+              return { offset: offset, element: child };
+            } else {
+              return closest;
+            }
+          },
+          { offset: Number.NEGATIVE_INFINITY },
+        ).element;
+      }
+
+      function updateNumbers() {
+        const items = listContainer.querySelectorAll(".draggable-item");
+        items.forEach((item, index) => {
+          item.querySelector(".item-number").textContent = index + 1;
+        });
+      }
+
+      function removeHighlights() {
+        const items = listContainer.querySelectorAll(".draggable-item");
+        items.forEach((item) => {
+          item.classList.remove("item-correct", "item-incorrect", "pulse");
+        });
+        feedbackMsg.classList.remove("show", "success", "error");
+      }
+
+      // Check Answer Logic
+      checkBtn.addEventListener("click", () => {
+        const items = listContainer.querySelectorAll(".draggable-item");
+        let allCorrect = true;
+
+        items.forEach((item, index) => {
+          const text = item.dataset.text;
+          item.classList.remove("item-correct", "item-incorrect", "pulse");
+
+          // Force reflow
+          void item.offsetWidth;
+
+          if (text === correctOrder[index]) {
+            item.classList.add("item-correct", "pulse");
+          } else {
+            item.classList.add("item-incorrect", "pulse");
+            allCorrect = false;
+          }
+        });
+
+        if (allCorrect) {
+          feedbackMsg.innerHTML =
+            '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Perfect! You ordered all events correctly.';
+          feedbackMsg.className = "feedback success show";
+          fireConfetti();
+        } else {
+          feedbackMsg.innerHTML =
+            '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> Keep trying! Some events are out of order.';
+          feedbackMsg.className = "feedback error show";
+        }
+      });
+
+      function fireConfetti() {
+        var duration = 3000;
+        var end = Date.now() + duration;
+
+        (function frame() {
+          confetti({
+            particleCount: 5,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 },
+            colors: ["#4f46e5", "#10b981", "#fbbf24"],
+          });
+          confetti({
+            particleCount: 5,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 },
+            colors: ["#4f46e5", "#10b981", "#fbbf24"],
+          });
+
+          if (Date.now() < end) {
+            requestAnimationFrame(frame);
+          }
+        })();
+      }
+
+      // Initialize
+      renderItems();
+    </script>
+  </body>
+</html>
