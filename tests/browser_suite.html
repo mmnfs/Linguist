@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Linguist Browser Suite</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #f4f6f8;
+      color: #17202a;
+    }
+
+    .card {
+      max-width: 960px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #d9e2ec;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 28px;
+    }
+
+    #summary {
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .pass {
+      color: #0f9d58;
+    }
+
+    .fail {
+      color: #c62828;
+    }
+
+    ul {
+      padding-left: 20px;
+    }
+
+    li {
+      margin: 8px 0;
+      line-height: 1.4;
+    }
+
+    iframe {
+      width: 1px;
+      height: 1px;
+      border: 0;
+      position: absolute;
+      left: -9999px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Linguist Browser Suite</h1>
+    <p id="summary" data-suite-status="running">Running browser tests...</p>
+    <ul id="results"></ul>
+  </div>
+
+  <script>
+    const resultsEl = document.getElementById("results");
+    const summaryEl = document.getElementById("summary");
+    const results = [];
+
+    function recordResult(ok, title, details = "") {
+      const item = document.createElement("li");
+      item.className = ok ? "pass" : "fail";
+      item.textContent = (ok ? "PASS" : "FAIL") + " - " + title + (details ? " :: " + details : "");
+      resultsEl.appendChild(item);
+      results.push({ ok, title, details });
+    }
+
+    function assert(condition, title, details = "") {
+      recordResult(Boolean(condition), title, condition ? details : details);
+      if (!condition) {
+        throw new Error(title + (details ? " :: " + details : ""));
+      }
+    }
+
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function loadFrame(src) {
+      const iframe = document.createElement("iframe");
+      iframe.src = src;
+      document.body.appendChild(iframe);
+
+      await new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => reject(new Error("Timed out loading " + src)), 10000);
+        iframe.onload = () => {
+          clearTimeout(timeoutId);
+          resolve();
+        };
+        iframe.onerror = () => {
+          clearTimeout(timeoutId);
+          reject(new Error("Failed to load " + src));
+        };
+      });
+
+      await wait(100);
+      return iframe;
+    }
+
+    function getTexts(nodes) {
+      return Array.from(nodes).map(node => node.textContent.trim()).filter(Boolean);
+    }
+
+    async function testEnglishSync() {
+      const frame = await loadFrame("../english_jumbled_sentence_exercise.html");
+      const win = frame.contentWindow;
+      const doc = frame.contentDocument;
+      const hooks = win.__linguistTestHooks;
+
+      assert(Boolean(hooks), "english: exposes deterministic test hooks");
+      assert(doc.getElementById("karaoke-status").textContent.trim() === "Ready", "english: initial karaoke status is Ready");
+      const exerciseData = hooks.getExerciseData();
+      assert(exerciseData.audioSrc === "./phrase.mp3", "english: uses an external audio asset", exerciseData.audioSrc);
+      assert(exerciseData.syllableCount === 9, "english: external exercise config keeps nine syllables", "count=" + exerciseData.syllableCount);
+
+      const syllables = doc.querySelectorAll("#syllable-guide [data-syllable]");
+      assert(syllables.length === 9, "english: renders nine syllable tokens", "found=" + syllables.length);
+      assert(getTexts(syllables).join("|") === "The|weath|er|is|beau|ti|ful|to|day", "english: syllable order matches expected phrase");
+
+      hooks.updateKaraokeHighlight(1.00);
+      const midState = hooks.getKaraokeState();
+      const activeMid = midState.syllables.filter(s => s.state === "active").map(s => s.text);
+      const completedMid = midState.syllables.filter(s => s.state === "completed").map(s => s.text);
+
+      assert(activeMid.length === 1 && activeMid[0] === "ti", "english: highlight activates the current syllable at 1.00s", activeMid.join("|"));
+      assert(completedMid.join("|") === "The|weath|er|is|beau", "english: earlier syllables are marked completed at 1.00s", completedMid.join("|"));
+
+      hooks.updateKaraokeHighlight(2.23);
+      const doneState = hooks.getKaraokeState();
+      const completedDone = doneState.syllables.filter(s => s.state === "completed");
+      assert(completedDone.length === 9, "english: final timestamp completes all syllables", "completed=" + completedDone.length);
+
+      const restoreMockAudio = hooks.installMockAudioController();
+      doc.getElementById("speed-125").click();
+      doc.getElementById("btn-play").click();
+      await wait(25);
+
+      let audioState = hooks.getAudioState();
+      let karaokeState = hooks.getKaraokeState();
+      assert(karaokeState.status === "Playing", "english: play updates the karaoke status to Playing", karaokeState.status);
+      assert(audioState.source.includes("phrase.mp3"), "english: runtime audio source resolves to the external mp3", audioState.source);
+      assert(audioState.playbackRate === 1.25, "english: play uses the selected playback rate", "rate=" + audioState.playbackRate);
+
+      hooks.emitMockTimeUpdate(0.62);
+      karaokeState = hooks.getKaraokeState();
+      const activeDuringPlayback = karaokeState.syllables.filter(s => s.state === "active").map(s => s.text);
+      assert(activeDuringPlayback.length === 1 && activeDuringPlayback[0] === "is", "english: timeupdate during playback keeps the highlight on 'is' in the Whisper window", activeDuringPlayback.join("|"));
+
+      hooks.emitMockPause(0.62);
+      karaokeState = hooks.getKaraokeState();
+      audioState = hooks.getAudioState();
+      assert(karaokeState.status === "Paused", "english: pause updates the karaoke status to Paused", karaokeState.status);
+      assert(audioState.paused === true, "english: pause leaves the audio state marked as paused");
+
+      doc.getElementById("btn-play").click();
+      await wait(25);
+      hooks.emitMockEnded(2.23);
+      karaokeState = hooks.getKaraokeState();
+      audioState = hooks.getAudioState();
+      assert(karaokeState.status === "Complete", "english: ended updates the karaoke status to Complete", karaokeState.status);
+      assert(audioState.ended === true, "english: ended marks the audio state as ended");
+
+      restoreMockAudio();
+
+      const theButton = Array.from(doc.querySelectorAll("#word-bank button")).find(btn => btn.textContent.trim() === "The");
+      assert(Boolean(theButton), "english: source button exists in word bank");
+      theButton.click();
+      const sentenceWords = getTexts(doc.querySelectorAll("#your-sentence button"));
+      assert(sentenceWords.join("|") === "The", "english: clicking a word moves it into the sentence area", sentenceWords.join("|"));
+    }
+
+    async function testReadingExercise() {
+      const frame = await loadFrame("../reading_ordering_exercise.html");
+      const doc = frame.contentDocument;
+
+      const items = doc.querySelectorAll("#sortable-list .draggable-item");
+      assert(items.length === 5, "reading: renders five ordering items", "found=" + items.length);
+
+      doc.getElementById("btn-show-answer").click();
+      await wait(50);
+
+      const answerTexts = getTexts(doc.querySelectorAll("#sortable-list .item-text"));
+      const expected = [
+        "Maria woke up.",
+        "Maria brushed her teeth and got dressed.",
+        "Maria made coffee and ate breakfast.",
+        "Maria took the bus to school.",
+        "Maria arrived at school."
+      ];
+
+      assert(answerTexts.join("|") === expected.join("|"), "reading: Show Answer restores the correct chronological order", answerTexts.join("|"));
+    }
+
+    async function run() {
+      try {
+        await testEnglishSync();
+        await testReadingExercise();
+        summaryEl.textContent = "All browser tests passed (" + results.length + " assertions).";
+        summaryEl.className = "pass";
+        summaryEl.dataset.suiteStatus = "pass";
+      } catch (error) {
+        summaryEl.textContent = "Browser tests failed after " + results.length + " assertions.";
+        summaryEl.className = "fail";
+        summaryEl.dataset.suiteStatus = "fail";
+        recordResult(false, "suite", error.message);
+      }
+    }
+
+    window.addEventListener("load", run);
+  </script>
+</body>
+</html>
